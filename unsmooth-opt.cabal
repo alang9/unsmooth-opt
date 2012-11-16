@@ -15,7 +15,8 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 library
-  -- exposed-modules:     
+  exposed-modules:
+    Numeric.Optimisation.GoldenSection
   -- other-modules:       
   build-depends:       base ==4.5.*
   ghc-options: -Wall -fwarn-tabs -O2 -funbox-strict-fields
