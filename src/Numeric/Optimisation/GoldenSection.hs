@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE BangPatterns #-}
 
@@ -11,52 +10,62 @@ module Numeric.Optimisation.GoldenSection
     , searchWithBracket
     , searchWithBracketUntil
     , searchWithBracketUntil'
+    , steps
     ) where
 
-import Control.Arrow
 import Control.Exception
+import Data.List
 
 import Numeric.Optimisation.Bracket
+import Numeric.Optimisation.Internal
 
 searchWithBracket :: (RealFloat a, Ord a, Ord b) =>
-    (a -> b) -> ((a, b), (a, b), (a, b)) -> (a, b)
+    (a -> b) -> ((a, b), (a, b), (a, b)) -> ((a, b), Int)
 searchWithBracket = searchWithBracketUntil (Just 100)
 {-# SPECIALIZE searchWithBracket :: (Double -> Double) ->
     ((Double, Double), (Double, Double), (Double, Double)) ->
-    (Double, Double) #-}
+    ((Double, Double), Int) #-}
 {-# SPECIALIZE searchWithBracket :: (Float -> Float) ->
     ((Float, Float), (Float, Float), (Float, Float)) ->
-    (Float, Float) #-}
+    ((Float, Float), Int) #-}
 
 -- | Golden section search, given a bracket and optionally a maximum number
 -- of iterations
-searchWithBracketUntil :: (RealFloat a, Ord a, Ord b) => Maybe Int -> (a -> b)
-                       -> ((a, b), (a, b), (a, b)) -> (a, b)
+searchWithBracketUntil :: (RealFloat a, Ord a, Ord b, Integral c) => Maybe c
+                       -> (a -> b) -> ((a, b), (a, b), (a, b)) -> ((a, b), c)
 searchWithBracketUntil = searchWithBracketUntil' defaultTolerance
-
-defaultTolerance :: forall a. RealFloat a => a
-defaultTolerance = (fromIntegral (floatRadix (undefined :: a)) **) .
-    (/ 2) . fromIntegral . negate $ floatDigits (undefined :: a)
-{-# INLINE defaultTolerance #-}
 
 -- | Golden section search, given a bracket, a minimum tolerance to pass and
 -- optionally a maximum number of iterations
-searchWithBracketUntil' :: (Floating a, Ord a, Ord b) => a -> Maybe Int
-                        -> (a -> b) -> ((a, b), (a, b), (a, b)) -> (a, b)
-searchWithBracketUntil' tolerance m'itmax f start = final
+searchWithBracketUntil' :: (Floating a, Ord a, Ord b, Integral c) => a -> Maybe c
+                        -> (a -> b) -> ((a, b), (a, b), (a, b)) -> ((a, b), c)
+searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
   where
-    ((_, final, _), _) = until stop (step f *** succ) (start, 0)
-    stop (fourthPoint f -> ((x1, _), (x2, _), (x3, _), (x4, _)), it) =
-        abs (x4 - x1) < tolerance * (abs x2 + abs x3) ||
-        maybe True (it >=) m'itmax
+    (numIt, (_, final, _)) =
+        case takeWhile limit . zip [0..] $ steps f start of
+            [] -> (0, start)
+            xs -> maybe (last xs) id $ find small xs
+    limit (idx, _) = maybe True (idx <=) m'itmax
+    small (_, fourthPoint f -> ((x1, _), (x2, _), (x3, _), (x4, _))) =
+        abs (x4 - x1) < tolerance * (abs x2 + abs x3)
 {-# SPECIALIZE searchWithBracketUntil' :: Double -> Maybe Int ->
     (Double -> Double) ->
     ((Double, Double), (Double, Double), (Double, Double)) ->
-    (Double, Double) #-}
+    ((Double, Double), Int) #-}
 {-# SPECIALIZE searchWithBracketUntil' :: Float -> Maybe Int ->
     (Float -> Float) ->
     ((Float, Float), (Float, Float), (Float, Float)) ->
-    (Float, Float) #-}
+    ((Float, Float), Int) #-}
+
+steps :: (Floating a, Ord a, Ord b) => (a -> b)
+      -> ((a, b), (a, b), (a, b)) -> [((a, b), (a, b), (a, b))]
+steps = iterate . step
+{-# SPECIALIZE steps :: (Double -> Double) ->
+    ((Double, Double), (Double, Double), (Double, Double)) ->
+    [((Double, Double), (Double, Double), (Double, Double))] #-}
+{-# SPECIALIZE steps :: (Float -> Float) ->
+    ((Float, Float), (Float, Float), (Float, Float)) ->
+    [((Float, Float), (Float, Float), (Float, Float))] #-}
 
 step :: (Floating a, Ord a, Ord b) => (a -> b)
      -> ((a, b), (a, b), (a, b)) -> ((a, b), (a, b), (a, b))
@@ -91,13 +100,14 @@ fourthPoint f ((x1, f1), (x2, f2), (x3, f3)) =
     ((Float, Float), (Float, Float), (Float, Float)) ->
     ((Float, Float), (Float, Float), (Float, Float), (Float, Float)) #-}
 
-search :: (RealFloat a, Ord a, Show a) => (a -> a) -> a -> (a, a)
+search :: (RealFloat a, Ord a, Show a) => (a -> a) -> a -> ((a, a), Int)
 search f a = searchWithBracket f $ findBracket f a (a + defaultTolerance)
-{-# SPECIALIZE search :: (Double -> Double) -> Double -> (Double, Double) #-}
-{-# SPECIALIZE search :: (Float -> Float) -> Float -> (Float, Float) #-}
+{-# SPECIALIZE search :: (Double -> Double) -> Double ->
+    ((Double, Double), Int) #-}
+{-# SPECIALIZE search :: (Float -> Float) -> Float -> ((Float, Float), Int) #-}
 
 searchWithBounds :: (RealFloat a, Ord a, Show a) => (a -> a)
-                 -> (Maybe a, Maybe a) -> a -> (a, a)
+                 -> (Maybe a, Maybe a) -> a -> ((a, a), Int)
 searchWithBounds f (m'lower, m'upper) a = searchWithBracket g $
     findBracket g a (a + defaultTolerance)
   where
