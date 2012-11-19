@@ -19,8 +19,9 @@ import Data.List
 import Numeric.Optimisation.Bracket
 import Numeric.Optimisation.Internal
 
-searchWithBracket :: (RealFloat a, Ord a, Ord b) =>
-    (a -> b) -> ((a, b), (a, b), (a, b)) -> ((a, b), Int)
+-- | Golden section search, with a maximum of 100 iterations.
+searchWithBracket :: (RealFloat a, Ord a, Ord b) => (a -> b)
+                  -> ((a, b), (a, b), (a, b)) -> ((a, b), Int)
 searchWithBracket = searchWithBracketUntil (Just 100)
 {-# SPECIALIZE searchWithBracket :: (Double -> Double) ->
     ((Double, Double), (Double, Double), (Double, Double)) ->
@@ -30,15 +31,16 @@ searchWithBracket = searchWithBracketUntil (Just 100)
     ((Float, Float), Int) #-}
 
 -- | Golden section search, given a bracket and optionally a maximum number
--- of iterations
+-- of iterations.
 searchWithBracketUntil :: (RealFloat a, Ord a, Ord b, Integral c) => Maybe c
                        -> (a -> b) -> ((a, b), (a, b), (a, b)) -> ((a, b), c)
 searchWithBracketUntil = searchWithBracketUntil' defaultTolerance
 
 -- | Golden section search, given a bracket, a minimum tolerance to pass and
--- optionally a maximum number of iterations
-searchWithBracketUntil' :: (Floating a, Ord a, Ord b, Integral c) => a -> Maybe c
-                        -> (a -> b) -> ((a, b), (a, b), (a, b)) -> ((a, b), c)
+-- optionally a maximum number of iterations.
+searchWithBracketUntil' :: (Floating a, Ord a, Ord b, Integral c) => a
+                        -> Maybe c -> (a -> b) -> ((a, b), (a, b), (a, b))
+                        -> ((a, b), c)
 searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
   where
     (numIt, (_, final, _)) =
@@ -57,6 +59,8 @@ searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
     ((Float, Float), (Float, Float), (Float, Float)) ->
     ((Float, Float), Int) #-}
 
+-- | Produce a list of successive narrowings of an initial bracket using the
+-- golden section rule.
 steps :: (Floating a, Ord a, Ord b) => (a -> b)
       -> ((a, b), (a, b), (a, b)) -> [((a, b), (a, b), (a, b))]
 steps = iterate . step
@@ -100,12 +104,16 @@ fourthPoint f ((x1, f1), (x2, f2), (x3, f3)) =
     ((Float, Float), (Float, Float), (Float, Float)) ->
     ((Float, Float), (Float, Float), (Float, Float), (Float, Float)) #-}
 
+-- | Golden section search with at most 100 iterations, where the second
+-- initial point is taken ε from the first.
 search :: (RealFloat a, Ord a, Show a) => (a -> a) -> a -> ((a, a), Int)
 search f a = searchWithBracket f $ findBracket f a (a + defaultTolerance)
 {-# SPECIALIZE search :: (Double -> Double) -> Double ->
     ((Double, Double), Int) #-}
 {-# SPECIALIZE search :: (Float -> Float) -> Float -> ((Float, Float), Int) #-}
 
+-- | Golden section search with at most 100 iterations, with (optional) lower
+-- and upper bounds, where the second initial point is taken ε from the first.
 searchWithBounds :: (RealFloat a, Ord a, Show a) => (a -> a)
                  -> (Maybe a, Maybe a) -> a -> ((a, a), Int)
 searchWithBounds f (m'lower, m'upper) a = searchWithBracket g $
