@@ -3,8 +3,8 @@
 
 name:                unsmooth-opt
 version:             0.1.0.0
-synopsis:            Implementations of numerical optimisation algorithms which do not require derivatives.
--- description:         
+synopsis:            Implementations of numerical optimisation algorithms, not requiring derivatives.
+description:         Contains implementation of a heuristic bracket search, and golden section search.
 license:             BSD3
 license-file:        LICENSE
 author:              Alex Lang
@@ -18,7 +18,12 @@ library
   exposed-modules:
     Numeric.Optimisation.Bracket
     Numeric.Optimisation.GoldenSection
-  -- other-modules:       
+  other-modules:
+    Numeric.Optimisation.Internal
   build-depends:       base ==4.5.*
-  ghc-options: -Wall -fwarn-tabs -O2 -funbox-strict-fields
+  ghc-options: -Wall -fwarn-tabs -funbox-strict-fields
   hs-source-dirs: src
+
+source-repository head
+  type:      git
+  location:  git://github.com/alang9/unsmooth-opt.git
