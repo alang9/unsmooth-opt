@@ -14,7 +14,7 @@ isBracket ((x1, f1), (x2, f2), (x3, f3)) =
 {-# SPECIALIZE isBracket ::
     ((Float, Float), (Float, Float), (Float, Float)) -> Bool #-}
 
-findBracket :: (Floating a, Ord a, Show a) => (a -> a) -> a -> a
+findBracket :: (Floating a, Ord a) => (a -> a) -> a -> a
             -> ((a, a), (a, a), (a, a))
 findBracket f a' b'
     | f b' > f a' = golden (b', f b') (a', f a')
