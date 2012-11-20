@@ -3,9 +3,7 @@
 {-# LANGUAGE BangPatterns #-}
 
 module Numeric.Optimisation.GoldenSection
-    ( findBracket
-    , isBracket
-    , search
+    ( search
     , searchWithBounds
     , searchWithBracket
     , searchWithBracketUntil
