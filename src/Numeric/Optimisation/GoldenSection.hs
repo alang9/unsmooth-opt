@@ -117,9 +117,7 @@ searchWithBounds :: (RealFloat a, Ord a, Show a) => (a -> a)
 searchWithBounds f (m'lower, m'upper) a = searchWithBracket g $
     findBracket g a (a + defaultTolerance)
   where
-    g x | maybe False (x <) m'lower = 1/0
-        | maybe False (x >) m'upper = 1/0
-        | otherwise = f x
+    g = clamp f bounds
 {-- SPECIALIZE searchWithBounds ::
     (Double -> Double) -> Double -> (Double, Double) #-}
 {-- SPECIALIZE searchWithBounds ::
