@@ -11,6 +11,7 @@ module Numeric.Optimisation.GoldenSection
     , steps
     ) where
 
+import Control.Arrow
 import Control.Exception
 import Data.List
 
@@ -44,9 +45,9 @@ searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
     (numIt, (_, final, _)) =
         case takeWhile limit . zip [0..] $ steps f start of
             [] -> (0, start)
-            xs -> maybe (last xs) id $ find small xs
+            xs -> second getBracket . maybe (last xs) id $ find small xs
     limit (idx, _) = maybe True (idx <=) m'itmax
-    small (_, fourthPoint f -> ((x1, _), (x2, _), (x3, _), (x4, _))) =
+    small (_, ((x1, _), (x2, _), (x3, _), (x4, _))) =
         abs (x4 - x1) < tolerance * (abs x2 + abs x3)
 {-# SPECIALIZE searchWithBracketUntil' :: Double -> Maybe Int ->
     (Double -> Double) ->
@@ -60,29 +61,22 @@ searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
 -- | Produce a list of successive narrowings of an initial bracket using the
 -- golden section rule.
 steps :: (Floating a, Ord a, Ord b) => (a -> b)
-      -> ((a, b), (a, b), (a, b)) -> [((a, b), (a, b), (a, b))]
-steps = iterate . step
+      -> ((a, b), (a, b), (a, b)) -> [((a, b), (a, b), (a, b), (a, b))]
+steps f start = assert (isBracket start) .
+    iterate (fourthPoint f . getBracket) $ fourthPoint f start
 {-# SPECIALIZE steps :: (Double -> Double) ->
     ((Double, Double), (Double, Double), (Double, Double)) ->
-    [((Double, Double), (Double, Double), (Double, Double))] #-}
+    [((Double, Double), (Double, Double), (Double, Double), (Double, Double))] #-}
 {-# SPECIALIZE steps :: (Float -> Float) ->
     ((Float, Float), (Float, Float), (Float, Float)) ->
-    [((Float, Float), (Float, Float), (Float, Float))] #-}
+    [((Float, Float), (Float, Float), (Float, Float), (Float, Float))] #-}
 
-step :: (Floating a, Ord a, Ord b) => (a -> b)
-     -> ((a, b), (a, b), (a, b)) -> ((a, b), (a, b), (a, b))
-step f start = assert (isBracket start) . go $ fourthPoint f start
-  where
-    go (p1, p2, p3, p4)
-        | isBracket (p1, p2, p3) = (p1, p2, p3)
-        | isBracket (p2, p3, p4) = (p2, p3, p4)
-        | otherwise = undefined
-{-# SPECIALIZE step :: (Double -> Double) ->
-    ((Double, Double), (Double, Double), (Double, Double)) ->
-    ((Double, Double), (Double, Double), (Double, Double)) #-}
-{-# SPECIALIZE step :: (Float -> Float) ->
-    ((Float, Float), (Float, Float), (Float, Float)) ->
-    ((Float, Float), (Float, Float), (Float, Float)) #-}
+getBracket :: (Num a, Ord b, Ord a) => ((a, b), (a, b), (a, b), (a, b))
+           -> ((a, b), (a, b), (a, b))
+getBracket (p1, p2, p3, p4)
+    | isBracket (p1, p2, p3) = (p1, p2, p3)
+    | isBracket (p2, p3, p4) = (p2, p3, p4)
+    | otherwise = undefined
 
 fourthPoint :: (Floating a, Ord a) => (a -> b) -> ((a, b), (a, b), (a, b))
             -> ((a, b), (a, b), (a, b), (a, b))
