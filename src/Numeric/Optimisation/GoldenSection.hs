@@ -9,6 +9,7 @@ module Numeric.Optimisation.GoldenSection
     , searchWithBracketUntil
     , searchWithBracketUntil'
     , steps
+    , stepsWithBracket
     ) where
 
 import Control.Arrow
@@ -43,7 +44,7 @@ searchWithBracketUntil' :: (Floating a, Ord a, Ord b, Integral c) => a
 searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
   where
     (numIt, (_, final, _)) =
-        case takeWhile limit . zip [0..] $ steps f start of
+        case takeWhile limit . zip [0..] $ stepsWithBracket f start of
             [] -> (0, start)
             xs -> second getBracket . maybe (last xs) id $ find small xs
     limit (idx, _) = maybe True (idx <=) m'itmax
@@ -60,15 +61,22 @@ searchWithBracketUntil' tolerance m'itmax f start = (final, numIt)
 
 -- | Produce a list of successive narrowings of an initial bracket using the
 -- golden section rule.
-steps :: (Floating a, Ord a, Ord b) => (a -> b)
+stepsWithBracket :: (Floating a, Ord a, Ord b) => (a -> b)
       -> ((a, b), (a, b), (a, b)) -> [((a, b), (a, b), (a, b), (a, b))]
-steps f start = assert (isBracket start) .
+stepsWithBracket f start = assert (isBracket start) .
     iterate (fourthPoint f . getBracket) $ fourthPoint f start
-{-# SPECIALIZE steps :: (Double -> Double) ->
+{-# SPECIALIZE stepsWithBracket :: (Double -> Double) ->
     ((Double, Double), (Double, Double), (Double, Double)) ->
     [((Double, Double), (Double, Double), (Double, Double), (Double, Double))] #-}
-{-# SPECIALIZE steps :: (Float -> Float) ->
+{-# SPECIALIZE stepsWithBracket :: (Float -> Float) ->
     ((Float, Float), (Float, Float), (Float, Float)) ->
+    [((Float, Float), (Float, Float), (Float, Float), (Float, Float))] #-}
+
+steps :: (RealFloat a, Ord a) => (a -> a) -> a -> [((a, a), (a, a), (a, a), (a, a))]
+steps f x = stepsWithBracket f $ findBracket f x (x + defaultTolerance)
+{-# SPECIALIZE steps :: (Double -> Double) -> Double ->
+    [((Double, Double), (Double, Double), (Double, Double), (Double, Double))] #-}
+{-# SPECIALIZE steps :: (Float -> Float) -> Float ->
     [((Float, Float), (Float, Float), (Float, Float), (Float, Float))] #-}
 
 getBracket :: (Num a, Ord b, Ord a) => ((a, b), (a, b), (a, b), (a, b))
