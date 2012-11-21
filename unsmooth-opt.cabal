@@ -17,6 +17,7 @@ cabal-version:       >=1.8
 library
   exposed-modules:
     Numeric.Optimisation.Bracket
+    Numeric.Optimisation.Brent
     Numeric.Optimisation.GoldenSection
   other-modules:
     Numeric.Optimisation.Internal
